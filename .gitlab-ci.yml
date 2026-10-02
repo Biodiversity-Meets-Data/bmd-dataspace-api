@@ -1,0 +1,227 @@
+variables:
+  # Version of docker-dind and docker-cli-extras image
+  DIND_VERSION: 28.4.0
+  # HC Vault
+  VAULT_SERVER_URL: "https://vault.naturalis.io"
+  SERVICE_DOMAIN: bii
+  SERVICE_NAME: bmd
+  VAULT_AUTH_ROLE: "jwt-${SERVICE_NAME}"
+  VAULT_PATH: "${SERVICE_DOMAIN}/${SERVICE_NAME}"
+  TRIVY_DB_REPOSITORY: "aquasec/trivy-db:2"
+
+.job_id_tokens: &job_id_tokens
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: https://${CI_SERVER_HOST}
+
+# If we are going to deploy a pre-existing image, also known as image promotion,
+# then we skip all build-like jobs. We build-and-deploy to DEV, but we only deploy
+# a pre-built image to PROD.
+.no_image_promotion: &no_image_promotion
+  - if: '$IMAGE_VERSION'
+    when: never
+  - when: on_success
+
+workflow:
+  rules:
+    # If this is a push to a branch that already has an open MR, skip the push pipeline
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_OPEN_MERGE_REQUESTS'
+      when: never
+    # Otherwise create a pipeline
+    - when: always
+
+stages:
+  - "Secret Detection"
+  - "Build"
+  - "Create Image"
+  - "Trivy Scan"
+  - "Tag Image"
+  - "Deploy"
+  - "Deploy Production" # Special case - includes publishing Javadocs
+
+cache:
+  key: ${CI_PROJECT_NAME}-${CI_COMMIT_REF_SLUG}
+  paths:
+    - build/mvn-repo
+
+include:
+  - template: Security/Secret-Detection.gitlab-ci.yml
+
+secret_detection:
+  extends: .secret-analyzer
+  stage: "Secret Detection"
+  variables:
+    SECRET_DETECTION_HISTORIC_SCAN: "false"
+    SECRET_DETECTION_REPORT_FILE: "gl-secret-detection-report.json"
+  artifacts:
+    reports:
+      secret_detection: $SECRET_DETECTION_REPORT_FILE
+    expire_in: 7 days
+  allow_failure: false
+  before_script:
+    - apk add --no-cache jq
+  script:
+    - /analyzer run
+    - |
+      if [ -f "$SECRET_DETECTION_REPORT_FILE" ]; then
+        if [ "$(jq ".vulnerabilities | length" $SECRET_DETECTION_REPORT_FILE)" -gt 0 ]; then
+          echo "Vulnerabilities detected!"
+          echo "Please check the $SECRET_DETECTION_REPORT_FILE security file."
+          echo "Or run gitleak locally on your repository."
+          exit 1
+        fi
+      else
+        echo "Artifact $SECRET_DETECTION_REPORT_FILE does not exist."
+        echo "No evaluation can be performed."
+      fi
+
+maven_build:
+  stage: "Build"
+  image: eclipse-temurin:25-jdk
+  rules:
+    *no_image_promotion
+  script:
+    - build/mvn-install.sh
+  artifacts:
+    expire_in: 3 days
+    paths:
+      - build/dependencies
+      - build/app
+
+generate_version_info:
+  stage: "Build"
+  image: "registry.gitlab.com/naturalis/lib/alpine-bookworm-cicd-utils:alpine"
+  rules:
+    *no_image_promotion
+  variables:
+    # Needed for generate-version-info.sh. Ensures tags are available in pipeline:
+    GIT_DEPTH: 0
+  script:
+    - build/generate-version-info.sh
+  artifacts:
+    expire_in: 3 days
+    paths:
+      - build/app
+
+create_image:
+  stage: "Create Image"
+  rules:
+    *no_image_promotion
+  image: registry.gitlab.com/naturalis/lib/docker-cli-extras:${DIND_VERSION}-cli
+  services:
+    - docker:${DIND_VERSION}-dind
+  script:
+    - build/create-image.sh
+
+trivy_scan:
+  stage: "Trivy Scan"
+  image:
+    name: docker.io/aquasec/trivy:latest
+    entrypoint: [""]
+  variables:
+    TRIVY_CACHE_DIR: .trivy
+  cache:
+    key: trivy-cache
+    paths:
+      - "$TRIVY_CACHE_DIR"
+  before_script:
+    # Tag "${CI_COMMIT_REF_SLUG}_${CI_COMMIT_SHA}" is the tag created by create-image.sh.
+    # If the user has specified a particular tag via the IMAGE_VERSION pipeline variable,
+    # then we must scan the image with that tag.
+    - if [ -z "${IMAGE_VERSION:-}" ]; then IMAGE_VERSION="${CI_COMMIT_REF_SLUG}_${CI_COMMIT_SHA}"; fi
+    - IMAGE="${CI_REGISTRY_IMAGE}:${IMAGE_VERSION}"
+    - "wget --header \"PRIVATE-TOKEN: $TRIVYIGNORE_ACCESS_TOKEN\" \"https://gitlab.com/api/v4/projects/41791412/repository/files/trivyignore/raw?ref=main\" --output-document=.trivyignore"
+    - trivy --version
+    - mkdir -p "$TRIVY_CACHE_DIR"
+    - |
+      if [ ! -f .trivy/db/trivy.db ] || [ $(find .trivy/ -name "trivy.db" -mtime +1 | grep "trivy.db") ]; then
+          echo "Downloading the trivy db ...";
+          rm -rf $TRIVY_CACHE_DIR/db;
+          trivy image --cache-dir "$TRIVY_CACHE_DIR" --download-db-only --db-repository $TRIVY_DB_REPOSITORY;
+      fi
+  script:
+    # GitLab-compatible report
+    - >
+      trivy image --cache-dir "$TRIVY_CACHE_DIR" --no-progress
+      --username "$CI_REGISTRY_USER" --password "$CI_JOB_TOKEN"
+      --scanners vuln
+      --format template --template "@/contrib/gitlab.tpl"
+      -o gl-container-scanning-report.json
+      "${IMAGE}"
+    # Hard-fail on HIGH/CRITICAL (after writing the report)
+    - >
+      trivy image --cache-dir "$TRIVY_CACHE_DIR" --no-progress
+      --username "$CI_REGISTRY_USER" --password "$CI_JOB_TOKEN"
+      --ignore-unfixed --exit-code 1 --severity HIGH,CRITICAL
+      "${IMAGE}"
+  artifacts:
+    when: always
+    # If we ever switch to GitLab Ultimate, this file will be picked up
+    # by GitLab and used in a sexy security dashboard
+    reports:
+      container_scanning: "gl-container-scanning-report.json"
+    paths:
+      - "gl-container-scanning-report.json"
+      - "$TRIVY_CACHE_DIR"
+    expire_in: 7 days
+
+tag_docker_image:
+  stage: "Tag Image"
+  rules:
+    *no_image_promotion
+  image: registry.gitlab.com/naturalis/lib/docker-cli-extras:${DIND_VERSION}-cli
+  services:
+    - docker:${DIND_VERSION}-dind
+  script:
+    - build/tag-image.sh
+
+
+deploy_development:
+  <<: *job_id_tokens
+  stage: "Deploy"
+  variables:
+    DEPLOY_HOST: dev
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+    - if: '$DEPLOY_ENV && $DEPLOY_ENV != "dev"'
+      when: never
+    - when: on_success
+  image: registry.gitlab.com/naturalis/lib/docker-cli-extras:${DIND_VERSION}-cli
+  services:
+    - docker:${DIND_VERSION}-dind
+  script:
+    - ansible/deploy.sh
+
+deploy_production:
+  <<: *job_id_tokens
+  stage: "Deploy Production"
+  image: registry.gitlab.com/naturalis/lib/docker-cli-extras:${DIND_VERSION}-cli
+  services:
+    - docker:${DIND_VERSION}-dind
+  variables:
+    DEPLOY_HOST: prod
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "main" && $DEPLOY_ENV == "prod" && $IMAGE_VERSION'
+      when: on_success
+    - when: never
+  script:
+    - ansible/deploy.sh
+
+publish_javadocs:
+  # Publishes the Javadocs to https://naturalis.gitlab.io/bii/bmd/bmd-dataspace-api/
+  stage: "Deploy Production"
+  image: eclipse-temurin:25-jdk
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && $DEPLOY_ENV == "prod" && $IMAGE_VERSION'
+      when: on_success
+    - when: never
+  script:
+    - build/publish-javadocs.sh
+  artifacts:
+    paths:
+      - public
+
+

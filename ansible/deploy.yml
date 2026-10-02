@@ -1,0 +1,9 @@
+- hosts: all
+  become: true
+  tasks:
+    - name: Deploy BMD Dataspace API
+      include_role:
+        name: deploy
+        apply:
+          tags: deploy
+      tags: deploy

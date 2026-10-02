@@ -1,0 +1,31 @@
+server:
+  port: 8080
+  tomcat:
+    accesslog:
+      enabled: true
+      directory: /proc/self/fd
+      prefix: "1"
+      suffix: ""
+      file-date-format: ""
+      rotate: false
+      buffered: false
+      pattern: '%a %l %u %t "%r" %s %b %D'
+
+spring:
+  mvc:
+    problemdetails:
+      enabled: true
+
+app:
+  graph:
+    base-iri: "${GRAPH_BASE_IRI:urn:uuid:}"
+    # NB When running inside a Docker container, the Jena data directory inside
+    # the container will always be /data/bmd/jena. See docker-compose.yml. In that
+    # case the directory on the Docker host can be freely chosen, but it _must_ be
+    # volume-mapped to /data/bmd/jena.
+    jena-data-dir: "${JENA_DATA_DIR:/data/bmd/jena}"
+  discodata:
+    endpoint: "https://discodata.eea.europa.eu/sql"
+    eunis-query-template: "SELECT * FROM [EUNIS].[latest].[Site_Information] WHERE code_site = '%s'"
+    bise-query-template:  "SELECT * FROM [BISE].[latest].[Site_Information] WHERE site_code = '%s'"
+    geopackage-path: "${GEOPACKAGE_PATH:/data/bmd/resources/eea/Natura2000_end2024.gpkg}"

@@ -1,34 +1,35 @@
 # BMD Dataspace API
 
-The BMD Dataspace API allows VREs to interact with the Cubing Engine and with the RO-Crate
-storage and query service.
+This repository contains the code for interacting with the BMD Dataspace. The BMD Dataspace API
+is a REST API implemented in Java/Spring Boot. Its endpoints fall apart into three main categories:
+1. Endpoints for interacting with the Cubing Engine running on the BMD Dataspace.
+2. Endpoints for ingesting the RO-Crates produced by the BATs. The BMD Dataspace API will inspect
+   the RO-Crates and use the information collected from them to populate a triple store. Information
+   inside the triple store is exposed via other endpoints in this corner of the BMD Dataspace API.
+   Whether the RO-Crates are themselves stored in the BMD Dataspace (or discarded after analysis)
+   is currently an open question.
+3. General utilities not necessarily tied to the BMD Dataspace. Currently these are focused on
+   providing a harmonized view of Natura2000 site metadata and geoshapes from various organizations
+   (BISE, EUNIS, EEA).
 
-(More info coming soon)
 
-## API Documentation (OpenAPI / Swagger UI)
+## Documentation
 
-The project integrates **Springdoc OpenAPI 3**, which automatically generates 
-interactive API documentation for all REST controllers.
-
-Once the application is running, you can access:
-
-- **Swagger UI (interactive docs)**  
+- **OpenAPI UI (interactive docs)**  
   👉 [http://localhost:8080/scalar](http://localhost:8080/scalar)
 
 - **OpenAPI JSON specification**  
-  👉 [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
+  👉 [https://dataspace.bmdproject.eu/v3/api-docs](https://dataspace.bmdproject.eu/v3/api-docs)
 
-These endpoints are available by default in all environments.
+- **Javadocs**
 
-### 🔧 Configuration
+  👉
 
-The OpenAPI metadata (title, version, description) is defined in  
-[`eu.bmdproject.dataspace.config.OpenApiConfig`](src/main/java/eu/bmdproject/dataspace/OpenApiConfig.java).
+_(Developer note: the OpenAPI metadata (title, version, description) is defined in
+`src/main/java/eu/bmdproject/dataspace/OpenApiConfig.java`. See the
+[Springdoc OpenAPI documentation](https://springdoc.org/) for more info.)_
 
-If you need to customize groupings, include/exclude endpoints, or add authentication 
-details to the docs, refer to the [Springdoc OpenAPI documentation](https://springdoc.org/).
+## Developer Setup
 
-## Javadocs
+## Docker / Docker Compose
 
-Javadocs are generated as part of the GitLab pipeline. They can be viewed at
-[https://naturalis.gitlab.io/bii/bmd/bmd-dataspace-api](https://naturalis.gitlab.io/bii/bmd/bmd-dataspace-api)

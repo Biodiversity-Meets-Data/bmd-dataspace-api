@@ -33,7 +33,7 @@ _Developer note: the OpenAPI metadata (title, version, description) is defined i
 ### Prerequisites
 
 - **JDK 25**
-- **Maven**. The project comes with Maven wrapper (`./mvnw`), which downloads Maven 3.9.9 on first use. 
+- **Maven**. The project comes with the Maven wrapper (`./mvnw`), which downloads Maven 3.9.9 on first use. 
 - **Git**
 - **Docker**
 - **Natura2000_end2024.gpkg**. Required for the site-geometry endpoints (`/sites/{code}/geojson`). Download it from 

@@ -25,7 +25,7 @@ is a REST API implemented in Java/Spring Boot. Its endpoints fall apart into thr
   👉 [TODO]
 
 _Developer note: the OpenAPI metadata (title, version, description) is defined in
-`src/main/java/eu/bmdproject/dataspace/config/OpenApiConfig.java`. See the
+[OpenApiConfig](src/main/java/eu/bmdproject/dataspace/config/OpenApiConfig.java). See the
 [Springdoc OpenAPI documentation](https://springdoc.org/) for more info._
 
 ## Developer Setup

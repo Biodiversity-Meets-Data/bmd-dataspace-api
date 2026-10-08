@@ -16,10 +16,10 @@ is a REST API implemented in Java/Spring Boot. Its endpoints fall apart into thr
 ## Documentation
 
 - **OpenAPI UI (interactive docs)**  
-  👉 [http://localhost:8080/scalar](http://localhost:8080/scalar)
+  👉 <https://dataspace.bmdproject.eu/scalar>
 
 - **OpenAPI JSON specification**  
-  👉 [https://dataspace.bmdproject.eu/v3/api-docs](https://dataspace.bmdproject.eu/v3/api-docs)
+  👉 <https://dataspace.bmdproject.eu/v3/api-docs>
 
 - **Javadocs**  
   👉 [TODO]

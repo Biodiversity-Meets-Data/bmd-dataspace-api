@@ -23,13 +23,128 @@ is a REST API implemented in Java/Spring Boot. Its endpoints fall apart into thr
 
 - **Javadocs**
 
-  👉
+  👉 [TODO]
 
 _(Developer note: the OpenAPI metadata (title, version, description) is defined in
-`src/main/java/eu/bmdproject/dataspace/OpenApiConfig.java`. See the
+`src/main/java/eu/bmdproject/dataspace/config/OpenApiConfig.java`. See the
 [Springdoc OpenAPI documentation](https://springdoc.org/) for more info.)_
 
 ## Developer Setup
 
+### Prerequisites
+
+- **JDK 25**
+- **Maven**. The project comes with Maven wrapper (`./mvnw`), which downloads Maven 3.9.9 on first use. 
+- **Git**
+- **Docker**
+- **`Natura2000_end2024.gpkg`** (EEA, end-2024 release). Required for the site-geometry endpoints 
+  (`/sites/{code}/geojson`). Download it from <https://sdi.eea.europa.eu/data/91357f39-7866-41ce-b447-43905c364ec8>.
+  Download it to `${APP_DATA_DIR}/eea` (see [Data Directories](#data-directories))
+
+### Data Directories
+
+The application assumes the presence of an `APP_DATA_DIR` directory — the top directory of all persistent storage
+required by the application. You are free to choose the location of APP_DATA_DIR. By default it is assumed to be 
+`/data/bmd/`. See [application.yml](src/main/resources/application.yml) and [env.template](env.template). Make sure
+`APP_DATA_DIR` is owned by the user who runs the application. Assuming you stick to the default value:
+
+```bash
+mkdir -p /data/bmd/jena /data/bmd/eea
+sudo chown -R $USER:$USER /data/bmd
+```
+
+### Getting the Code
+
+```bash
+git clone git@github.com:Biodiversity-Meets-Data/bmd-dataspace-api.git
+cd bmd-dataspace-api
+```
+
+### Building
+
+```bash
+./mvnw clean install
+```
+
+A few things worth knowing about the build:
+
+- `install` does more than produce the jar. It copies all runtime dependencies to `build/dependencies/` and the 
+  application jar to `build/app/app.jar`. The `Dockerfile` consumes both directories, so the container image is 
+  assembled from the output of a normal `install` rather than from a fat jar.
+- There is deliberately **no** `spring-boot-maven-plugin`. The project does not build an executable fat jar and 
+  `./mvnw spring-boot:run` will not work. See *Running locally* below for how to start the application.
+- The enforcer plugin fails the build on dependency-version divergence
+  (`DependencyConvergence`). If you add or bump a dependency and the build complains, run `./mvnw dependency:tree` 
+  to find the conflict and pin the version in `dependencyManagement`.
+
+To run only the tests:
+
+```bash
+./mvnw test
+```
+
+Test coverage is measured by JaCoCo. After a test run the HTML report is at `target/site/jacoco/index.html`.
+
+### Running Locally
+
+Because there is no Spring Boot repackaging plugin, run the application by starting the main class directly:
+
+- **From IntelliJ:** run `eu.bmdproject.dataspace.BmdDataspaceApiApplication`.
+- **From the command line**, after `./mvnw install`:
+
+  ```bash
+  java -cp "build/dependencies/*:build/app/*" eu.bmdproject.dataspace.BmdDataspaceApiApplication
+  ```
+
+All persistent paths derive from a single setting, `APP_DATA_DIR` (see [Data Directories](#data-directories)), which 
+defaults to `/data/bmd`. At startup the application opens a Jena TDB2 dataset under `${APP_DATA_DIR}/jena`, so that 
+directory must exist and be writable, or the application will not start.
+
+```bash
+export APP_DATA_DIR=/data/bmd # or whatever location you chose for APP_DATA_DIR
+mkdir -p "$APP_DATA_DIR/jena" "$APP_DATA_DIR/eea"
+java -cp "build/dependencies/*:build/app/*" eu.bmdproject.dataspace.BmdDataspaceApiApplication
+```
+
+In IntelliJ, set `APP_DATA_DIR` under *Environment variables* in the Run Configuration.
+
+The site metadata endpoints (`/sites/{code}/metadata`) call the EEA Discodata service at 
+<https://discodata.eea.europa.eu/sql>, so you need network access for those. No credentials are required.
+
+Once started, the application logs the list of discovered HTTP endpoints (see 
+[EndpointSummaryLogger](src/main/java/eu/bmdproject/dataspace/bootstrap/EndpointSummaryLogger.java)), a quick way to 
+confirm the controllers are wired up.
+
+### Verifying It Runs
+
+With the application running on the default port 8080:
+
+- Health: <http://localhost:8080/api/health>
+- Version info: <http://localhost:8080/version>
+- OpenAPI UI (Scalar): <http://localhost:8080/scalar>
+- OpenAPI JSON: <http://localhost:8080/v3/api-docs>
+
+### Pre-commit hooks
+
+The repository uses [pre-commit](https://pre-commit.com/) to run
+[gitleaks](https://github.com/gitleaks/gitleaks) as a secret scanner before each commit.
+The hook runs gitleaks via Docker, so Docker must be running.
+
+```bash
+pipx install pre-commit   # or: pip install pre-commit
+pre-commit install
+```
+
+After this, gitleaks runs automatically on `git commit`. To scan the whole tree on demand:
+
+```bash
+pre-commit run --all-files
+```
+
 ## Docker / Docker Compose
 
+[TODO]
+
+## Deploy
+
+[TODO]

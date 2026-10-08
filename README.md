@@ -21,8 +21,7 @@ is a REST API implemented in Java/Spring Boot. Its endpoints fall apart into thr
 - **OpenAPI JSON specification**  
   👉 [https://dataspace.bmdproject.eu/v3/api-docs](https://dataspace.bmdproject.eu/v3/api-docs)
 
-- **Javadocs**
-
+- **Javadocs**  
   👉 [TODO]
 
 _Developer note: the OpenAPI metadata (title, version, description) is defined in
@@ -37,21 +36,25 @@ _Developer note: the OpenAPI metadata (title, version, description) is defined i
 - **Maven**. The project comes with Maven wrapper (`./mvnw`), which downloads Maven 3.9.9 on first use. 
 - **Git**
 - **Docker**
-- **`Natura2000_end2024.gpkg`** (EEA, end-2024 release). Required for the site-geometry endpoints 
-  (`/sites/{code}/geojson`). Download it from <https://sdi.eea.europa.eu/data/91357f39-7866-41ce-b447-43905c364ec8>.
-  Download it to `${APP_DATA_DIR}/eea` (see [Data Directories](#data-directories))
+- **Natura2000_end2024.gpkg**. Required for the site-geometry endpoints (`/sites/{code}/geojson`). Download it from 
+  <https://sdi.eea.europa.eu/data/91357f39-7866-41ce-b447-43905c364ec8> and save it to `${APP_DATA_DIR}/eea` (see 
+  [Data Directories](#data-directories))
 
 ### Data Directories
 
 The application assumes the presence of an `APP_DATA_DIR` directory — the top directory of all persistent storage
 required by the application. You are free to choose the location of APP_DATA_DIR. By default it is assumed to be 
 `/data/bmd/`. See [application.yml](src/main/resources/application.yml) and [env.template](env.template). Make sure
-`APP_DATA_DIR` is owned by the user who runs the application. Assuming you stick to the default value:
+`APP_DATA_DIR` is owned by the user who runs the application. Assuming you stick to the default value, create the
+following directories:
 
 ```bash
 mkdir -p /data/bmd/jena /data/bmd/eea
 sudo chown -R $USER:$USER /data/bmd
 ```
+
+As mentioned above, the `eea` subdirectory should contain the Natura2000_end2024.gpkg file. The `jena` subdirectory is
+used as the data directory for the Apache Jena triple store.
 
 ### Getting the Code
 

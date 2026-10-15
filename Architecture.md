@@ -73,11 +73,12 @@ matters is between two kinds of crate:
   example a [CWL file](https://www.commonwl.org/)) for turning the former into the latter. But it does _not_ include
   actual data.
 
-* A **run crate** describes an *actual execution* of the workflow. It _also_ records the specific inputs that were used
-  and the outputs that were produced — either embedded in the crate or, for large data, referenced by link (see below).
+* A **workflow run crate** describes an *actual execution* of the workflow. Besides the workflow description it _also_
+  records the specific inputs that were used and the outputs that were produced — either embedded in the crate itself
+  or, for large data, referenced by link (see below).
 
 Only the run crate ties a result to its provenance, which is what lets a published map be justified later ("here is
-exactly how this was computed, from exactly these inputs"). This matters for the hosting question below, because
+exactly how this was computed, from these exact inputs"). This matters for the hosting question below, because
 WorkflowHub — the external registry currently favored — is built primarily for the first kind, the reusable workflow
 description, not for per-run records.
 
@@ -102,10 +103,17 @@ the [BMD Dataspace REST API](https://dataspace.bmdproject.eu/scalar):
 
 ### BMD's Usage of RO-Crates
 
+#### Workflow Crates
+
 As a BAT produces the map requested by the end user, it also produces a workflow crate and publishes it
 to [WorkflowHub](https://workflowhub.org/). It then requests the BMD Dataspace to ingest the RO-Crate by means of its
 WorkflowHub URL. The BMD Dataspace downloads the RO-Crate and saves the extracted metadata to
 an [Apache Jena](https://jena.apache.org/) triple store. The RO-Crate itself is subsequently discarded.
+
+#### Workflow Run Crates
+
+At the same time, the BATs also produces a _run_ crate. This crate contains _everything_ that is needed to satisfy the
+end user's request — not just the map that came but also, for example, any static HTML and JavaScript to wrap around the
 
 ### Open questions
 
@@ -118,6 +126,67 @@ an [Apache Jena](https://jena.apache.org/) triple store. The RO-Crate itself is 
    division of labor be that WorkflowHub hosts the workflow crates while the dataspace hosts the run crates? Do BATs
    produce run crates?
 
-3. **User-facing Results.** The result a site manager ultimately receives is currently a downloadable bundle of static
-   HTML files. There have been suggestions that the Dataspace could store and serve these bundles too. That would be a
-   distinct storage role, separate from both the cubes and the provenance crates.
+## 4. Discovery — The STAC Catalog
+
+### Short Introduction to STAC
+
+If you already know what STAC is, you can skip this section.
+
+[STAC](https://stacspec.org/) (SpatioTemporal Asset Catalog) is a standard for describing geospatial datasets and making
+them searchable. A STAC _item_ records metadata about a dataset — its spatial and temporal extent, its license, and
+links to the actual files — but not the files themselves, which live elsewhere (typically object storage). A STAC server
+is therefore a searchable index over data held elsewhere, not a data store in its own right.
+
+### The STAC Server provided by the BMD Dataspace
+
+The BMD Dataspace hosts a STAC server (Element 84's open-source
+[stac-server](https://github.com/stac-utils/stac-server)), speaking version 1.1 of the
+[STAC API](https://github.com/radiantearth/stac-api-spec), with item search, CQL2 filtering, aggregation, and the
+transaction extension (so authorized clients can add and modify items through the API). The server is currently
+reachable at a provisional host and is expected to move under an official BMD domain. A separate web browser for the
+catalog (STAC Explorer) exists as a demo instance.
+
+The data assets it catalogs live in the dataspace's S3 storage, though some may be held elsewhere (see §2). At the time
+of writing the catalog holds about ten collections, all of them _inputs_ to the species distribution models:
+
+* environmental covariates — for example CHELSA bioclimatic variables (as Zarr datacubes), SoilGrids, EUNIS habitat
+  types (as a Cloud Optimized GeoTIFF), and Hydrography90m;
+* reference boundaries — for example Natura 2000 sites, biogeographical regions, countries, and terrestrial ecoregions
+  (all as GeoParquet);
+* the ChecklistBank species lists (the taxonomic backbone).
+
+Only one collection, an "example habitat suitability" dataset, resembles a model _output_ rather than an input, and it
+is labeled as example data.
+
+### BMD's Usage of the STAC Server
+
+Most of the collections are currently curated and published by UFZ (WP5). Our current understanding, to be confirmed
+with UFZ, is that the environmental cubes in the catalog (for example the CHELSA Zarr datacubes) are produced by UFZ
+running the Cubing Engine on their own HPC cluster. If so, this is an interim arrangement: the cubes are needed now, to
+develop and test the BATs against, while the dataspace does not yet run the Cubing Engine itself (see responsibility 1
+in §2). The present setup therefore previews the dataspace's intended cube pipeline — Cubing Engine → S3 → STAC item →
+read by the BATs — currently carried out by WP5 out of necessity.
+
+This connects directly to the provenance chapter (§3). For a run crate to remain reproducible, the cubes it references
+must not change under a stable URL. It is not yet clear whether the catalogued cubes are created once and then frozen,
+or regenerated (and overwritten) as the Cubing Engine is optimized — the same create-once requirement, arrived at from
+the other side.
+
+The catalog also overlaps with the `/sites` utility service (responsibility 5 in §2). The Natura 2000 and EUNIS datasets
+are cataloged on STAC as bulk files, and the same underlying data is also served, per site, by the dataspace's `/sites`
+endpoints. The two serve different access patterns — a bulk-file catalog versus a per-site query — and in practice at
+least one BAT developer (UFZ) uses the
+`/sites` endpoints precisely because they save querying the GeoParquet or Zarr directly. Why the same data is
+additionally cataloged on STAC is not currently clear (see Open Questions).
+
+### Open questions
+
+1. **Cube lifecycle.** Are the catalogued cubes created once and then frozen under a persistent URL, or regenerated and
+   overwritten as the Cubing Engine is optimized? This bears directly on the reproducibility of the run crates (§3).
+2. **Ownership of cube production.** Will cube generation and cataloging move to the dataspace (responsibility 1), or
+   remain with UFZ?
+3. **Outputs.** Are model outputs cataloged on STAC, or do they live only inside the run crates (§3)?
+4. **Overlap with `/sites`.** Why is data already served per site by the `/sites` endpoints (Natura 2000, EUNIS)
+   additionally cataloged as bulk files on STAC?
+5. **Write access.** Who may add or modify items on the STAC server, and how is that authenticated? The transaction
+   extension is enabled.

@@ -238,7 +238,7 @@ sequenceDiagram
     BAT ->> API: GET /sites/{siteCode}/metadata (or /geojson)
     API ->> GP: query (SQLite row / polygon feature)
     GP -->> API: site record / geometry
-    Note over API: normalize to domain model<br/>(geometry reprojected to WGS84)
+    Note over API: normalize to domain model<br/>geometry reprojected to WGS84
     API -->> BAT: DefaultSite or GeoJSON
 ```
 

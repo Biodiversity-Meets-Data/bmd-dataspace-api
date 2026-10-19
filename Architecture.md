@@ -330,7 +330,7 @@ POST /search
 }
 ```
 
-The returned item carries specifies the S3 URL in `item.assets.data.href`. The BAT would read it and carry on as before.
+The returned item specifies the S3 URL in `item.assets.data.href`. The BAT would read it and carry on as before.
 
 ```mermaid
 sequenceDiagram
@@ -346,10 +346,10 @@ sequenceDiagram
 
 #### A Resolver Endpoint
 
-The Dataspace API can wrap the above query behind a single endpoint — for example `GET /cubes/{name}/latest`, which
-would redirect to the correct AWS URL. This way, BAT developers could, in effect, keep using static URLs, except they
-are Dataspace API URLs. Note that the BATs call a dataspace API endpoint, but the cube's bytes directly come from AWS —
-no costly detour via the dataspace API.
+The Dataspace API can wrap the query behind a single endpoint — for example `GET /cubes/{name}/latest`, which would
+redirect to the correct AWS URL. This way, BAT developers could, in effect, keep using static URLs, except they are now
+Dataspace API URLs. Note that the BATs call a dataspace API endpoint, but the cube's bytes directly come from AWS — no
+costly detour via the dataspace API.
 
 ```mermaid
 sequenceDiagram

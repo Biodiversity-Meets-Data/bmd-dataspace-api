@@ -148,8 +148,8 @@ cannot be used. The crates must be POSTed directly to the API. This could prove 
 the crate will ultimately have to end up on the dataspace's S3 storage. Perhaps the BATs should only send the RO-Crate
 metadata (rocrate-metadata.json) to the API while sending the crate itself directly to the S3 storage. Nevertheless, for
 now we **propose** that BATs post the run crates to the API. The dataspace will then update the triple store, create a
-STAC item, and forward the RO-crate to S3 storage. The BATs will then be fed back a JSON object containing the STAC item
-ID (see [§4](#4-discovery--the-stac-catalog)) and the AWS URL.
+STAC item, and forward the RO-crate to S3 storage. In return the BAT will receive a JSON object containing the STAC item
+ID and the AWS URL.
 
 ```mermaid
 sequenceDiagram
@@ -193,8 +193,6 @@ provisional domain (`bmd-stac.dryrun.link`) and is expected to move to the offic
 populate the STAC server via the STAC API. A [separate web browser](https://stac-view-quest.base44.app/) for the catalog
 (STAC Explorer) exists as a demo instance.
 
-### BMD's Usage of the STAC Server
-
 #### Usage by the BATs
 
 The BATs have direct write access to the STAC server. While the data cubes produced by the Cubing Engine are important
@@ -222,10 +220,10 @@ STAC server.
 
 ## 5. Utilities — Site Metadata and Geometry
 
-Besides the services described above, the BMD Dataspace API exposes a number of utility endpoints:
-small, read-only services that save every BAT from re-implementing the same lookups.
+Besides the services described above, the BMD Dataspace API exposes a number of utility endpoints: small, read-only
+services that save every BAT from re-implementing the same lookups.
 
-At present there is one such service: **sites service**. Natura 2000 sites are identified by a site code. Given such a
+At present there is one such service: **site service**. Natura 2000 sites are identified by a site code. Given such a
 code, the site service returns:
 
 * the site's **metadata**, from any of three sources — EEA, BISE, or EUNIS;

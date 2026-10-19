@@ -91,7 +91,7 @@ For BMD, the distinction that matters is between two kinds of crate:
   records the specific inputs that were used and the outputs that were produced — either embedded in the crate itself
   or, for large data, referenced by link (see below).
 
-Only the run crate ties a result to its provenance, which is what lets a published map be justified later ("here is
+Only a run crate ties a result to its provenance, which is what lets a published map be justified later ("here is
 exactly how this was computed, from these exact inputs"). This matters for the hosting question below, because
 WorkflowHub — the external registry currently favored — is built primarily for the first kind, the reusable workflow
 description, not for per-run records.

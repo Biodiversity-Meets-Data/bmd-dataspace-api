@@ -308,7 +308,7 @@ project: it would be incoherent to engage the sternness of RO-Crates and Linked 
 provenance, only to overwrite the very cubes that the provenance depends on.
 
 Thus, we **propose** that each regeneration of a cube is written under a new URL and recorded as a new STAC item
-(providing a checksum). This impacts, however, how BATs should get hold of a cube. So far, they have been using static
+(containing a checksum). This impacts, however, how BATs should get hold of a cube. So far, they have been using static
 S3 URLs to retrieve files from the dataspace's S3 storage. Instead, the AWS URL should now be resolved via the STAC
 server. The following paragraphs provide options for BATs on how they can achieve this.
 

@@ -1,5 +1,13 @@
 # BMD Dataspace — Architecture
 
+## Status
+
+| Authors:     | Ayco Holleman      |
+|:-------------|:-------------------|
+| First draft: | 2026-10-19         |
+| Finalized:   |                    |
+| Status:      | Feedback Requested |
+
 ## List of Abbreviations and Acronyms
 
 |     |                             |
@@ -268,8 +276,8 @@ The basic mechanism is simple. The dataspace maintains a small registry of Cubin
 files are created by BAT developers, based on their needs. They also specify the frequency which with which the cube is
 regenerated.
 
-For each cube, a scheduled job (likely a cron job) invokes the Cubing Engine with the appropriate recipe file. The
-dataspace then stores the cube on its S3 storage and posts the STAC item to the STAC server (§4).
+For each cube, a job scheduler invokes the Cubing Engine with the appropriate recipe file. The dataspace then stores the
+cube on its S3 storage and posts the STAC item to the STAC server (§4).
 
 There is one subtlety. The access URL under which a cube becomes available is minted by the dataspace, not by the Cubing
 Engine. The dataspace must therefore edit the STAC item produced by the engine to insert that URL before posting it.
@@ -282,14 +290,14 @@ sequenceDiagram
     participant CE as Cubing Engine
     participant S3 as S3 storage
     participant STAC as STAC server
-    SCH->>DS: trigger (one cube)
-    DS->>CE: run (recipe YAML)
-    CE-->>DS: cube + STAC item
-    DS->>S3: upload cube
-    S3-->>DS: AWS URL
+    SCH ->> DS: trigger (one cube)
+    DS ->> CE: run (recipe YAML)
+    CE -->> DS: cube + STAC item
+    DS ->> S3: upload cube
+    S3 -->> DS: AWS URL
     Note over DS: insert AWS URL into STAC item
-    DS->>STAC: post STAC item
-    STAC-->>DS: STAC item ID
+    DS ->> STAC: post STAC item
+    STAC -->> DS: STAC item ID
 ```
 
 ### Cube Identity and Immutability
@@ -368,7 +376,7 @@ sequenceDiagram
    every regeneration adds a version that is never deleted, so storage grows without bound. A retention policy remains
    to be decided. **TBD**.
 
-## 7. Overall Architecture
+## 7. Flow Chart
 
 The preceding chapters each describe one service in isolation. This final chapter brings them together in a single
 picture: who talks to whom, and what flows between them. The key architectural point to take from it is the split
@@ -398,7 +406,7 @@ flowchart TB
         S3[(S3 storage)]
         CE[Cubing Engine]
         TS[(Jena triple store)]
-        CRON[cron scheduler]
+        SCH[Scheduler]
     end
 
     MGR -->|opens| EXP
@@ -409,30 +417,31 @@ flowchart TB
     BAT -->|" ① query cubes & datasets "| STAC
     BAT -->|" ② read cube / dataset by S3 URL "| S3
     BAT -->|" ③ /sites metadata & geometry "| API
-%% provenance
+%% provenance - workflow crate
     BAT -->|" ④ publish workflow crate "| WH
-    BAT -->|" ⑤ ingest crate (WorkflowHub URL) "| API
+    BAT -->|" ⑤ ingest workflow crate (WorkflowHub URL) "| API
     API -->|" ⑥ download crate "| WH
-    API -->|" ⑦ store extracted metadata "| TS
-    BAT -->|" ⑧ upload run crate (+ static HTML) "| S3
-    BAT -->|" ⑨ run-crate metadata (TBD) "| API
+%% provenance - run crate
+    BAT -->|" ⑦ POST run crate "| API
+    API -->|" ⑧ store run crate "| S3
+    API -->|" ⑨ create STAC item "| STAC
+%% shared
+    API -->|" ⑩ store crate metadata "| TS
 %% cube production
-    CRON -->|" ⑩ recipe (YAML) "| CE
-    CE -->|" ⑪ write cube "| S3
-    CE -->|" ⑫ post STAC item (S3 URL minted by dataspace) "| STAC
+    SCH -->|" ⑪ recipe (YAML) "| CE
+    CE -->|" ⑫ write cube "| S3
+    CE -->|" ⑬ post STAC item (S3 URL minted by dataspace) "| STAC
 ```
 
-**Walkthrough.** The numbered flows group into three concerns.
+**Discovery** (①–③). To run an analysis, a BAT first asks the STAC catalog which cubes and reference datasets it needs
+(①) and gets back, per item, the S3 URL of the actual file. It then reads those files directly from S3 (②). For per-site
+information it calls the `/sites` utility on the Dataspace API (③).
 
-_Discovery and data (①–③)._ To run an analysis, a BAT first asks the STAC catalog which cubes and reference datasets it
-needs (①) and gets back, per item, the S3 URL of the actual file. It then reads those files directly from S3 (②). For
-per-site information it calls the `/sites` utility on the Dataspace API (③).
+**Provenance** (④–⑩). For the workflow crate, the BAT publishes it to WorkflowHub (④) and asks the Dataspace to ingest
+it by its WorkflowHub URL (⑤), whereupon the Dataspace downloads it (⑥). The run crate — which carries the actual
+result, including the static HTML shown to the user — is instead POSTed to the Dataspace API (⑦), which stores it in S3
+(⑧) and creates a STAC item for it (⑨). In both cases the extracted metadata is written to the triple store (⑩).
 
-_Provenance (④–⑨)._ The BAT publishes a workflow crate to WorkflowHub (④) and asks the Dataspace to ingest it by its
-WorkflowHub URL (⑤); the Dataspace downloads the crate (⑥) and stores the extracted metadata in the triple store (⑦).
-The run crate — which carries the actual result, including the static HTML shown to the user — is uploaded directly to
-S3 (⑧), with only its metadata going to the API (⑨; exact mechanism TBD, see §3).
-
-_Cube production (⑩–⑫)._ Internally, a scheduled job runs the Cubing Engine against a recipe (⑩). The engine writes the
-cube to S3 (⑪) and produces a STAC item, which the Dataspace posts to the catalog after minting the cube's S3 URL (⑫).
-From then on the cube is discoverable through step ①.
+**Cube Production** (⑪–⑬). Internally, a scheduled job runs the Cubing Engine against a recipe (⑪). The engine writes
+the cube to S3 (⑫) and produces a STAC item, which the Dataspace posts to the catalog after minting the cube's S3 URL
+(⑬). From then on the cube is discoverable through step ①.

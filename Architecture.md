@@ -265,7 +265,7 @@ sequenceDiagram
 ## 6. Running the Cubing Engine
 
 The dataspace is responsible for running the Cubing Engine to produce the data cubes introduced in §1. The Cubing Engine
-creates a cube based on a so-called "recipe" which is encoded in YAML. So: YAML in; cube out. Besides the data cube, the
+creates a cube based on a so-called "recipe", which is encoded in YAML. So: YAML in; cube out. Besides the data cube, the
 Cubing Engine also generates a JSON file representing a STAC item — ready to be posted to the STAC server.
 
 ### Proposed Mechanism

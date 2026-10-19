@@ -275,7 +275,7 @@ files are created by BAT developers, based on their needs. They also specify the
 regenerated.
 
 For each cube, a job scheduler invokes the Cubing Engine with the appropriate recipe file. The dataspace then stores the
-cube on its S3 storage and posts the STAC item to the STAC server ([§4](#4-discovery--the-stac-catalog)).
+cube on its S3 storage and posts the STAC item to the STAC server.
 
 There is one subtlety. The access URL under which a cube becomes available is minted by the dataspace, not by the Cubing
 Engine. The dataspace must therefore edit the STAC item produced by the engine to insert that URL before posting it.

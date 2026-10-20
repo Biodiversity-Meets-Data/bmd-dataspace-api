@@ -265,17 +265,17 @@ sequenceDiagram
 ## 6. Running the Cubing Engine
 
 The dataspace is responsible for running the Cubing Engine to produce the data cubes introduced in §1. The Cubing Engine
-creates a cube based on a so-called "recipe", which is encoded in YAML. So: YAML in; cube out. Besides the data cube, the
-Cubing Engine also generates a JSON file representing a STAC item — ready to be posted to the STAC server.
+creates a cube based on a so-called "recipe", which is encoded in YAML. So: YAML in; cube out. Besides the data cube,
+the Cubing Engine also generates a JSON file representing a STAC item — ready to be posted to the STAC server.
 
 ### Proposed Mechanism
 
 The basic mechanism is simple. The dataspace maintains a small registry of Cubing Engine "recipe" files. The recipe
-files are created by BAT developers, based on their needs. They also specify the frequency with which the cube is
+files are created by BAT developers, based on their needs. They also specify the frequency with which the cube is to be
 regenerated.
 
 For each cube, a job scheduler invokes the Cubing Engine with the appropriate recipe file. The dataspace then stores the
-cube on its S3 storage and posts the STAC item to the STAC server.
+cube on S3 and posts the STAC item to the STAC server.
 
 There is one subtlety. The access URL under which a cube becomes available is minted by the dataspace, not by the Cubing
 Engine. The dataspace must therefore edit the STAC item produced by the engine to insert that URL before posting it.
@@ -302,8 +302,8 @@ sequenceDiagram
 
 We **propose** that **data cubes are never overwritten**. Again, if a cube is overwritten, then all crates that linked
 to a previous version of the cube stop reproducing the original result. This is hard to reconcile with the rest of the
-project: it would be incoherent to engage the sternness of RO-Crates and Linked Open Data for the sake of reproducible
-provenance, only to overwrite the very cubes that the provenance depends on.
+project: it would be incoherent to engage the sternness of RO-Crates and Linked Open Data for the sake of
+reproducibility, only to overwrite the very cubes that the reproducibility depends on.
 
 Thus, we **propose** that each regeneration of a cube is written under a new URL and recorded as a new STAC item
 (containing a checksum). This impacts, however, how BATs should get hold of a cube. So far, they have been using static

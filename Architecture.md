@@ -345,7 +345,7 @@ sequenceDiagram
 #### A Resolver Endpoint
 
 The Dataspace API can wrap the query behind a single endpoint — for example `GET /cubes/{name}/latest`, which would
-redirect to the correct AWS URL. This way, BAT developers could, in effect, keep using static URLs, except they are now
+redirect to the correct AWS URL. This way, BAT developers can, in effect, keep using static URLs, except they are now
 Dataspace API URLs. Note that the BATs call a dataspace API endpoint, but the cube's bytes directly come from AWS — no
 costly detour via the dataspace API.
 

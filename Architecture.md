@@ -23,9 +23,9 @@
 
 [Biodiversity Meets Data](https://bmd-project.eu/) (BMD) is an EU-funded project that aims to provide biodiversity
 monitoring for Natura 2000 managers (the stakeholders). Its end product is a portal, the Biodiversity Explorer, in which
-they can run species distribution models (SDMs). An SDM relates observed occurrences of a species to environmental
-variables such as temperature and precipitation, and uses that relationship to estimate where the species occurs, or
-could occur, under past, current or projected conditions.
+they can run species distribution models (SDMs) and other types of analyses. An SDM relates observed occurrences of a
+species to environmental variables such as temperature and precipitation, and uses that relationship to estimate where
+the species occurs, or could occur, under past, current or projected conditions.
 
 BMD is split into eight work packages (WPs), each with its own deliverables. The BMD Dataspace is built in WP4. The work
 packages most relevant for this document are listed below, in the order in which data flows through them.
